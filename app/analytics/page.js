@@ -2,25 +2,32 @@
 
 import React, { useEffect, useState } from "react";
 import { db } from "../firebase";
+import { FaMapLocationDot } from "react-icons/fa6";
+import { GiTwoCoins } from "react-icons/gi";
 import { ref, onValue } from "firebase/database";
+import { PiQrCodeFill } from "react-icons/pi";
 
 export default function AnalyticsPage() {
   const [qrList, setQrList] = useState([]);
   const [totalPoints, setTotalPoints] = useState(0);
+  const [totalCategories, setTotalCategories] = useState(0);
 
   useEffect(() => {
-    const qrRef = ref(db, "QR-Data");
-    const unsubscribe = onValue(qrRef, (snapshot) => {
+    // Listen to QR-Data
+    const qrDataRef = ref(db, "QR-Data");
+    const stopListeningQRData = onValue(qrDataRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const qrArray = Object.keys(data).map((key) => ({
-          id: key,
-          ...data[key],
-        }));
+        const qrArray = Object.keys(data)
+          .map((key) => ({ id: key, ...data[key] }))
+          .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
         setQrList(qrArray);
 
-        // Calculate total points
-        const pointsSum = qrArray.reduce((sum, qr) => sum + Number(qr.points || 0), 0);
+        const pointsSum = qrArray.reduce(
+          (sum, qr) => sum + Number(qr.points || 0),
+          0
+        );
         setTotalPoints(pointsSum);
       } else {
         setQrList([]);
@@ -28,8 +35,26 @@ export default function AnalyticsPage() {
       }
     });
 
-    // Cleanup subscription
-    return () => unsubscribe();
+    // Listen to Categories
+    const categoriesRef = ref(db, "Categories");
+    const stopListeningCategories = onValue(categoriesRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const categoryArray = Object.keys(data).map((key) => ({
+          id: key,
+          ...data[key],
+        }));
+        setTotalCategories(categoryArray.length);
+      } else {
+        setTotalCategories(0);
+      }
+    });
+
+    // Cleanup on unmount
+    return () => {
+      stopListeningQRData();
+      stopListeningCategories();
+    };
   }, []);
 
   return (
@@ -38,22 +63,31 @@ export default function AnalyticsPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <div className="bg-blue-600 text-white p-6 rounded-xl shadow-lg">
-          <h2 className="text-xl font-semibold">Total QR Codes</h2>
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <PiQrCodeFill  className="text-3xl" />
+            Total QR Codes
+          </h2>
           <p className="text-3xl font-bold mt-2">{qrList.length}</p>
         </div>
 
         <div className="bg-green-600 text-white p-6 rounded-xl shadow-lg">
-          <h2 className="text-xl font-semibold">Total Points</h2>
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <GiTwoCoins className="text-3xl" />
+            Total Points
+          </h2>
           <p className="text-3xl font-bold mt-2">{totalPoints}</p>
         </div>
 
         <div className="bg-purple-600 text-white p-6 rounded-xl shadow-lg">
-          <h2 className="text-xl font-semibold">Other Stats</h2>
-          <p className="text-2xl mt-2">Coming Soon...</p>
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            {" "}
+            <FaMapLocationDot className="text-3xl" /> Total Location Area
+          </h2>
+          <p className="text-3xl font-bold mt-2">{totalCategories}</p>
         </div>
       </div>
 
-      {/* Optional: Show all QR codes in cards */}
+      {/* QR Codes Overview */}
       <h2 className="text-2xl font-bold mb-4">QR Codes Overview</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {qrList.map((qr) => (

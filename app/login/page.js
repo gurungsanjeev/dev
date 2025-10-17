@@ -69,7 +69,7 @@ const Login = () => {
                 type="text"
                 id="email"
                 required
-                placeholder="Enter your name"
+                placeholder="Enter your email"
                 value={form.email}
                 onChange={handleChange}
                 className="p-2 mt-1 rounded border-none bg-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-400  focus:border-none w-full"
@@ -84,7 +84,7 @@ const Login = () => {
                 type="password"
                 id="password"
                 required
-                placeholder="Enter your name"
+                placeholder="Enter your password"
                 value={form.password}
                 onChange={handleChange}
                 className="p-2 mt-1 rounded border-none bg-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-400 bor focus:border-none w-full"

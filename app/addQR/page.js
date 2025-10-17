@@ -1,32 +1,60 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { db } from "../firebase";
-import { BsQrCode } from "react-icons/bs";
-import { ref, push } from "firebase/database";
+import { ref, push, onValue } from "firebase/database";
 
-export default function TestPage() {
+export default function AddQrPage() {
   const [form, setForm] = useState({
     name: "",
     latitude: "",
     longitude: "",
+    location: "",
     type: "",
     points: "",
     picture: "",
     description: "",
+    status: "Active",
   });
-  const [message, setMessage] = useState("");
-  const [qrList, setQrList] = useState([]);
-  const [timestamp, setTimeStamp] = useState(Date.now());
 
+  const [categories, setCategories] = useState([]); // for dropdown
+  const [message, setMessage] = useState("");
+
+  // Fetch categories from Firebase
+  useEffect(() => {
+    const categoriesRef = ref(db, "Categories");
+    const unsubscribe = onValue(categoriesRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const catArray = Object.keys(data).map((key) => ({
+          id: key,
+          ...data[key],
+        }));
+        setCategories(catArray);
+      } else {
+        setCategories([]);
+      }
+    });
+
+    return () => unsubscribe(); // cleanup
+  }, []);
+
+  // Handle input changes
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!form.type) {
+      setMessage("Please select a category.");
+      return;
+    }
+
     try {
+      const timestamp = Date.now();
       await push(ref(db, "QR-Data"), { ...form, timestamp });
-      setQrList([...qrList, form]);
+      setMessage("QR Code added successfully!");
       setForm({
         name: "",
         latitude: "",
@@ -35,176 +63,159 @@ export default function TestPage() {
         points: "",
         picture: "",
         description: "",
+        status: "Active",
       });
-      setMessage("Data pushed successfully!");
-      setTimeout(() => setMessage(""), 3000); // hide after 3s
-    } catch (err) {
-      console.error(err);
-      setMessage("Error pushing data, check console.");
+      setTimeout(() => setMessage(""), 3000);
+    } catch (error) {
+      console.error(error);
+      setMessage("Error adding QR code.");
     }
   };
 
   return (
     <div className="p-8 bg-gray-100 min-h-screen">
-      <h1 className="text-3xl font-bold mb-6 text-center">Generate QR Code </h1>
-      
+      <h1 className="text-3xl font-bold mb-6 text-center">Add QR Code</h1>
 
-      <div className="flex flex-col md:flex-row gap-8">
-        {/* Form Section */}
-        <div className="md:w-1/2 bg-white p-6 rounded-xl shadow">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="font-semibold">QR Name</label>
-              <input
-                type="text"
-                name="name"
-                placeholder="QR Code Name"
-                value={form.name}
-                onChange={handleChange}
-                className="p-2 mt-1 rounded border-none bg-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-400  focus:border-none w-full"
-                required
-              />
-            </div>
+      {message && (
+        <p className="mb-4 text-green-600 text-center font-semibold">
+          {message}
+        </p>
+      )}
 
-            <div className="flex gap-4">
-              <div className="w-1/2">
-                <label className="font-semibold">Latitude</label>
-                <input
-                  type="text"
-                  name="latitude"
-                  placeholder="Latitude"
-                  value={form.latitude}
-                  onChange={handleChange}
-                  className="p-2 mt-1 rounded border-none bg-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-400  focus:border-none w-full"
-                  required
-                />
-              </div>
-              <div className="w-1/2">
-                <label className="font-semibold">Longitude</label>
-                <input
-                  type="text"
-                  name="longitude"
-                  placeholder="Longitude"
-                  value={form.longitude}
-                  onChange={handleChange}
-                  className="p-2 mt-1 rounded border-none bg-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-400  focus:border-none w-full"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="font-semibold">Type of QR</label>
-              <input
-                type="text"
-                name="type"
-                placeholder="Type of QR Code"
-                value={form.type}
-                onChange={handleChange}
-                className="p-2 mt-1 rounded border-none bg-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-400  focus:border-none w-full"
-              />
-            </div>
-
-            <div>
-              <label className="font-semibold">Points Allocated</label>
-              <input
-                type="number"
-                name="points"
-                placeholder="Points Allocated"
-                value={form.points}
-                onChange={handleChange}
-                className="p-2 mt-1 rounded border-none bg-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-400  focus:border-none w-full"
-              />
-            </div>
-
-            <div>
-              <label className="font-semibold">Picture URL</label>
-              <input
-                type="url"
-                name="picture"
-                placeholder="Picture URL"
-                value={form.picture}
-                onChange={handleChange}
-                className="p-2 mt-1 rounded border-none bg-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-400  focus:border-none w-full"
-              />
-            </div>
-
-            <div>
-              <label className="font-semibold">Description</label>
-              <textarea
-                name="description"
-                placeholder="Description"
-                value={form.description}
-                onChange={handleChange}
-                className="p-2 mt-1 rounded border-none bg-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-400  focus:border-none w-full"
-                rows="3"
-              />
-            </div>
-            <div className="my-4 flex gap-2">
-              <label className="font-semibold">Status</label>
-              <div className="flex gap-2">
-                <input
-                  type="radio"
-                  value="Active"
-                  name="radio-button"
-                  defaultChecked
-                />
-                Active
-                <input type="radio" value="Disable" name="radio-button" />
-                Disable
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-            >
-              Add QR Code
-            </button>
-          </form>
-          {message && <p className="mt-4 text-green-600">{message}</p>}
+      <form
+        onSubmit={handleSubmit}
+        className="max-w-xl mx-auto bg-white p-6 rounded-xl shadow space-y-4"
+      >
+        <div>
+          <label className="font-semibold">QR Name</label>
+          <input
+            type="text"
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            className="w-full p-2 mt-1 rounded bg-slate-100 focus:ring-2 focus:ring-blue-400 outline-none"
+            required
+          />
         </div>
 
-        {/* QR List Section */}
-        <div className="md:w-1/2 bg-white p-6 rounded-xl shadow overflow-auto max-h-[80vh]">
-          <h2 className="text-xl font-semibold mb-4">
-            {" "}
-            Recently added QR Codes
-          </h2>
-          <div className="space-y-3">
-            {qrList.length === 0 && <p>No QR codes added yet.</p>}
-            {qrList.map((qr, i) => (
-              <div key={i} className="p-4 border rounded bg-gray-50 shadow">
-                <p>
-                  <strong>Name:</strong> {qr.name}
-                </p>
-                <p>
-                  <strong>Location:</strong> {qr.latitude}, {qr.longitude}
-                </p>
-                <p>
-                  <strong>Type:</strong> {qr.type}
-                </p>
-                <p>
-                  <strong>Points:</strong> {qr.points}
-                </p>
-                <p>
-                  <strong>Picture URL:</strong>{" "}
-                  <a
-                    href={qr.picture}
-                    target="_blank"
-                    className="text-blue-500 underline"
-                  >
-                    View
-                  </a>
-                </p>
-                <p>
-                  <strong>Description:</strong> {qr.description}
-                </p>
-              </div>
-            ))}
+        <div className="flex gap-4">
+          <div className="w-1/2">
+            <label className="font-semibold">Latitude</label>
+            <input
+              type="text"
+              name="latitude"
+              value={form.latitude}
+              onChange={handleChange}
+              className="w-full p-2 mt-1 rounded bg-slate-100 focus:ring-2 focus:ring-blue-400 outline-none"
+            />
+          </div>
+          <div className="w-1/2">
+            <label className="font-semibold">Longitude</label>
+            <input
+              type="text"
+              name="longitude"
+              value={form.longitude}
+              onChange={handleChange}
+              className="w-full p-2 mt-1 rounded bg-slate-100 focus:ring-2 focus:ring-blue-400 outline-none"
+            />
           </div>
         </div>
-      </div>
+
+        <div>
+          <label className="font-semibold">Location Area</label>
+          <select
+            name="location"
+            value={form.location}
+            onChange={handleChange}
+            className="w-full p-2 mt-1 rounded bg-slate-100 focus:ring-2 focus:ring-blue-400 outline-none"
+            required
+          >
+            <option value="">-- Select Category --</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.name}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex gap-4">
+          <div className="w-1/2">
+            <label className="font-semibold">Type</label>
+            <input
+              type="text"
+              name="type"
+              value={form.type}
+              onChange={handleChange}
+              className="w-full p-2 mt-1 rounded bg-slate-100 focus:ring-2 focus:ring-blue-400 outline-none"
+            />
+          </div>
+
+          <div className="w-1/2">
+            <label className="font-semibold">Points</label>
+            <input
+              type="number"
+              name="points"
+              value={form.points}
+              onChange={handleChange}
+              className="w-full p-2 mt-1 rounded bg-slate-100 focus:ring-2 focus:ring-blue-400 outline-none"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="font-semibold">Picture URL</label>
+          <input
+            type="url"
+            name="picture"
+            value={form.picture}
+            onChange={handleChange}
+            className="w-full p-2 mt-1 rounded bg-slate-100 focus:ring-2 focus:ring-blue-400 outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="font-semibold">Description</label>
+          <textarea
+            name="description"
+            value={form.description}
+            onChange={handleChange}
+            rows="3"
+            className="w-full p-2 mt-1 rounded bg-slate-100 focus:ring-2 focus:ring-blue-400 outline-none"
+          />
+        </div>
+
+        <div className="flex gap-2 items-center">
+          <label className="font-semibold">Status</label>
+          <div className="flex gap-2">
+            <input
+              type="radio"
+              id="Active"
+              value="Active"
+              name="status"
+              checked={form.status === "Active"}
+              onChange={handleChange}
+            />
+            Active
+            <input
+              type="radio"
+              id="Disable"
+              value="Disable"
+              name="status"
+              checked={form.status === "Disable"}
+              onChange={handleChange}
+            />
+            Disable
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Add QR Code
+        </button>
+      </form>
     </div>
   );
 }
