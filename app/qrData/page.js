@@ -1,4 +1,4 @@
-"use client"; // Required for Next.js (ensures this component runs on the client side)
+"use client"; 
 
 import React, { useState, useEffect } from "react";
 import { FaEdit, FaTrashAlt } from "react-icons/fa";
