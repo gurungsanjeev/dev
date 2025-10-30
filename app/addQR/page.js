@@ -9,17 +9,18 @@ export default function AddQrPage() {
     latitude: "",
     longitude: "",
     location: "",
-    type: "",
+    type: "", 
     points: "",
     picture: "",
     description: "",
     status: "Active",
   });
 
-  const [categories, setCategories] = useState([]); // for dropdown
+  const [categories, setCategories] = useState([]); // location dropdown
+  const [qrTypes, setQrTypes] = useState([]); // type dropdown
   const [message, setMessage] = useState("");
 
-  // Fetch categories from Firebase
+  // Fetch location categories
   useEffect(() => {
     const categoriesRef = ref(db, "Categories");
     const unsubscribe = onValue(categoriesRef, (snapshot) => {
@@ -34,20 +35,41 @@ export default function AddQrPage() {
         setCategories([]);
       }
     });
-
-    return () => unsubscribe(); // cleanup
+    return () => unsubscribe();
   }, []);
 
-  // Handle input changes
+  // Fetch QR types
+  useEffect(() => {
+    const qrTypeRef = ref(db, "QrCategory"); 
+    const unsubscribe = onValue(qrTypeRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const typeArray = Object.keys(data).map((key) => ({
+          id: key,
+          ...data[key],
+        }));
+        setQrTypes(typeArray);
+      } else {
+        setQrTypes([]);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+
+
+//----- handle change
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // Handle form submission
+
+  //------ handle submit
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.type) {
-      setMessage("Please select a category.");
+
+    if (!form.name || !form.location || !form.type) {
+      setMessage("⚠️ Please fill all required fields.");
       return;
     }
 
@@ -59,6 +81,7 @@ export default function AddQrPage() {
         name: "",
         latitude: "",
         longitude: "",
+        location: "",
         type: "",
         points: "",
         picture: "",
@@ -66,8 +89,8 @@ export default function AddQrPage() {
         status: "Active",
       });
       setTimeout(() => setMessage(""), 3000);
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
       setMessage("Error adding QR code.");
     }
   };
@@ -77,15 +100,14 @@ export default function AddQrPage() {
       <h1 className="text-3xl font-bold mb-6 text-center">Add QR Code</h1>
 
       {message && (
-        <p className="mb-4 text-green-600 text-center font-semibold">
-          {message}
-        </p>
+        <p className="mb-4 text-green-600 text-center font-semibold">{message}</p>
       )}
 
       <form
         onSubmit={handleSubmit}
         className="max-w-xl mx-auto bg-white p-6 rounded-xl shadow space-y-4"
       >
+        {/* QR Name */}
         <div>
           <label className="font-semibold">QR Name</label>
           <input
@@ -98,6 +120,7 @@ export default function AddQrPage() {
           />
         </div>
 
+        {/* Latitude & Longitude */}
         <div className="flex gap-4">
           <div className="w-1/2">
             <label className="font-semibold">Latitude</label>
@@ -121,6 +144,7 @@ export default function AddQrPage() {
           </div>
         </div>
 
+        {/* Location Dropdown */}
         <div>
           <label className="font-semibold">Location Area</label>
           <select
@@ -130,7 +154,7 @@ export default function AddQrPage() {
             className="w-full p-2 mt-1 rounded bg-slate-100 focus:ring-2 focus:ring-blue-400 outline-none"
             required
           >
-            <option value="">-- Select Category --</option>
+            <option value="">-- Select Location --</option>
             {categories.map((cat) => (
               <option key={cat.id} value={cat.name}>
                 {cat.name}
@@ -139,16 +163,24 @@ export default function AddQrPage() {
           </select>
         </div>
 
+        {/* QR Type & Points */}
         <div className="flex gap-4">
           <div className="w-1/2">
-            <label className="font-semibold">Type</label>
-            <input
-              type="text"
+            <label className="font-semibold">QR Type</label>
+            <select
               name="type"
               value={form.type}
               onChange={handleChange}
               className="w-full p-2 mt-1 rounded bg-slate-100 focus:ring-2 focus:ring-blue-400 outline-none"
-            />
+              required
+            >
+              <option value="">-- Select QR Type --</option>
+              {qrTypes.map((cat) => (
+                <option key={cat.id} value={cat.name}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="w-1/2">
@@ -163,6 +195,7 @@ export default function AddQrPage() {
           </div>
         </div>
 
+        {/* Picture */}
         <div>
           <label className="font-semibold">Picture URL</label>
           <input
@@ -174,6 +207,7 @@ export default function AddQrPage() {
           />
         </div>
 
+        {/* Description */}
         <div>
           <label className="font-semibold">Description</label>
           <textarea
@@ -185,27 +219,30 @@ export default function AddQrPage() {
           />
         </div>
 
+        {/* Status */}
         <div className="flex gap-2 items-center">
           <label className="font-semibold">Status</label>
-          <div className="flex gap-2">
-            <input
-              type="radio"
-              id="Active"
-              value="Active"
-              name="status"
-              checked={form.status === "Active"}
-              onChange={handleChange}
-            />
-            Active
-            <input
-              type="radio"
-              id="Disable"
-              value="Disable"
-              name="status"
-              checked={form.status === "Disable"}
-              onChange={handleChange}
-            />
-            Disable
+          <div className="flex gap-4">
+            <label>
+              <input
+                type="radio"
+                name="status"
+                value="Active"
+                checked={form.status === "Active"}
+                onChange={handleChange}
+              />{" "}
+              Active
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="status"
+                value="Disable"
+                checked={form.status === "Disable"}
+                onChange={handleChange}
+              />{" "}
+              Disable
+            </label>
           </div>
         </div>
 

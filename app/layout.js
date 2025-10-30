@@ -19,7 +19,7 @@ export default function RootLayout({ children }) {
         <div className="flex-1">
 
         {children}
-        <Footer/>
+        {/* <Footer/> */}
         </div>
           </div>
       </body>
