@@ -6,6 +6,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import Footer from "@/components/Footer";
+import { ToastProvider } from "@/components/ui/toast";
 
 
 
@@ -13,15 +14,17 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        {/* <Navbar /> */}
-        <div className="flex">
-        <Sidebar/>
-        <div className="flex-1">
+        <ToastProvider>
+          {/* <Navbar /> */}
+          <div className="flex">
+          <Sidebar/>
+          <div className="flex-1">
 
-        {children}
-        {/* <Footer/> */}
-        </div>
+          {children}
+          {/* <Footer/> */}
           </div>
+            </div>
+        </ToastProvider>
       </body>
     </html>
   );

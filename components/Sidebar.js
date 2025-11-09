@@ -103,6 +103,16 @@ const Sidebar = () => {
             <FaChartBar className="text-2xl" /> Analytics
           </li>
         </Link>
+
+        <Link href="/player-analytics" className="">
+          <li
+            className={`p-2 flex my-4 items-center gap-2 rounded-xl ${
+              isActive("/player-analytics") ? "bg-green-600" : "hover:bg-slate-600"
+            }`}
+          >
+            <FaUsers className="text-2xl" /> Player Analytics
+          </li>
+        </Link>
       </ul>
     </aside>
   );
