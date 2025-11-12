@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FaHome, FaUsers, FaChartBar } from "react-icons/fa";
+import { LuChartLine } from "react-icons/lu";
 import { MdOutlinePostAdd, MdOutlineQrCode2 } from "react-icons/md";
 import { MdCategory } from "react-icons/md";
 
@@ -94,13 +95,22 @@ const Sidebar = () => {
           </li>
         </Link>
 
-        <Link href="/analytics" className="">
+        {/* <Link href="/analytics" className="">
           <li
             className={`p-2 flex my-4 items-center gap-2 rounded-xl ${
               isActive("/analytics") ? "bg-green-600" : "hover:bg-slate-600"
             }`}
           >
             <FaChartBar className="text-2xl" /> Analytics
+          </li>
+        </Link> */}
+        <Link href="/analytics" className="">
+          <li
+            className={`p-2 flex my-4 items-center gap-2 rounded-xl ${
+              isActive("/analytics") ? "bg-green-600" : "hover:bg-slate-600"
+            }`}
+          >
+            <LuChartLine className="text-2xl" /> QR Code Analytics
           </li>
         </Link>
       </ul>

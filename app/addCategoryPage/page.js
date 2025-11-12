@@ -23,7 +23,7 @@ export default function AddCategoryPage() {
     const trimmedName = form.name.trim().toLowerCase();
 
     if (!trimmedName || !form.description.trim()) {
-      setMessage("⚠️ Please fill all fields.");
+      setMessage("Please fill all fields.");
       return;
     }
 
