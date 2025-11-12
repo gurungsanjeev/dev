@@ -72,13 +72,10 @@ const Sidebar = () => {
           </li>
         </Link>
 
-
         <Link href="/qrType" className="">
           <li
             className={`p-2 flex my-4 items-center gap-2 rounded-xl ${
-              isActive("/qrType")
-                ? "bg-green-600"
-                : "hover:bg-slate-600"
+              isActive("/qrType") ? "bg-green-600" : "hover:bg-slate-600"
             }`}
           >
             <MdCategory className="text-2xl" /> Add Qr Category
@@ -88,7 +85,9 @@ const Sidebar = () => {
         <Link href="/viewQrCategory" className="">
           <li
             className={`p-2 flex my-4 items-center gap-2 rounded-xl ${
-              isActive("/viewQrCategory") ? "bg-green-600" : "hover:bg-slate-600"
+              isActive("/viewQrCategory")
+                ? "bg-green-600"
+                : "hover:bg-slate-600"
             }`}
           >
             <FaChartBar className="text-2xl" /> View QR Category
@@ -104,7 +103,7 @@ const Sidebar = () => {
             <FaChartBar className="text-2xl" /> Analytics
           </li>
         </Link> */}
-        <Link href="/analytics" className="">
+        {/* <Link href="/analytics" className="">
           <li
             className={`p-2 flex my-4 items-center gap-2 rounded-xl ${
               isActive("/analytics") ? "bg-green-600" : "hover:bg-slate-600"
@@ -112,7 +111,9 @@ const Sidebar = () => {
           >
             <LuChartLine className="text-2xl" /> QR Code Analytics
           </li>
-        </Link>
+        </Link> */}
+
+       
       </ul>
     </aside>
   );
