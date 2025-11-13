@@ -152,20 +152,19 @@ export default function QrData() {
   // --------------------  QR with redirect link only --------------------
   const handleGenerateQR = (qr) => {
     //  Generating direct redirect link
-    const baseURL = "https://www.ghumanteyuwa.com/";
+    // const baseURL = "https://www.ghumanteyuwa.com/";
 
     // Qr name
     const name = (qr.name || qr.location).toLowerCase().replace(/\s+/g, "_");
 
     // qr location
-    const location = (selectedLocation || qr.location)
+    // const location = (selectedLocation || qr.location)
+    const location = (selectedLocation || qr.name)
       .toLowerCase()
       .replace(/\s+/g, "_");
     const points = qr.points || 0;
-    const finalURL = `${baseURL}${location.slice(0, 4)}-${name.slice(
-      0,
-      4
-    )}${points}`;
+    // const finalURL = `${baseURL}${location.slice(0, 4)}-${name.slice(0,4)}${points}`;
+    const finalURL = `${location},${points}`;
 
     //  Set QR data to display
     setQrDataToShow(finalURL);
