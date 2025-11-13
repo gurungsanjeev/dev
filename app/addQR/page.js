@@ -59,9 +59,20 @@ export default function AddQrPage() {
 
 
 //----- handle change
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  // const handleChange = (e) => {
+  //   setForm({ ...form, [e.target.name]: e.target.value });
+  // };
+
+  //----- handle change
+const handleChange = (e) => {
+  const { name, value } = e.target;
+
+  setForm({
+    ...form,
+    [name]: name === "points" ? parseInt(value || 0, 10) : value,
+  });
+};
+
 
 
   //------ handle submit

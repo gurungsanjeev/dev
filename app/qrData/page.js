@@ -159,7 +159,8 @@ export default function QrData() {
 
     // qr location
     // const location = (selectedLocation || qr.location)
-    const location = (selectedLocation || qr.name)
+    // const location = (selectedLocation || qr.name)
+    const location = (qr.name)
       .toLowerCase()
       .replace(/\s+/g, "_");
     const points = qr.points || 0;
@@ -211,16 +212,13 @@ export default function QrData() {
 
     for (const qr of filteredQRs) {
       try {
-        const baseURL = "https://www.ghumanteyuwa.com/";
+        // const baseURL = "https://www.ghumanteyuwa.com/";
         const name = (qr.name || qr.location)
           .toLowerCase()
           .replace(/\s+/g, "_");
-        const location = (qr.location || "").toLowerCase().replace(/\s+/g, "_");
+        const location = (qr.location || "_").toLowerCase().replace(/\s+/g, "_");
         const points = qr.points || 0;
-        const finalURL = `${baseURL}${location.slice(0, 4)}-${name.slice(
-          0,
-          4
-        )}${points}`;
+        const finalURL = `${qr.name},${points}`;
 
         // Generate QR code as data URL
         const imageUrl = await QRCode.toDataURL(finalURL, { width: 800 });
@@ -228,7 +226,7 @@ export default function QrData() {
         // Download automatically
         const link = document.createElement("a");
         link.href = imageUrl;
-        link.download = `${location}_${name}.png`;
+        link.download = `${qr.name}_${name}.png`;
         link.click();
       } catch (error) {
         console.error("Error generating QR for", qr.name, error);
