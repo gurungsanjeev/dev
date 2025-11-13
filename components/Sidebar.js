@@ -110,7 +110,7 @@ const Sidebar = () => {
               isActive("/player-analytics") ? "bg-green-600" : "hover:bg-slate-600"
             }`}
           >
-            <FaUsers className="text-2xl" /> Player Analytics
+            <FaChartBar className="text-2xl" /> Player Analytics
           </li>
         </Link>
       </ul>
