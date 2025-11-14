@@ -112,7 +112,17 @@ const Sidebar = () => {
             <LuChartLine className="text-2xl" /> QR Code Analytics
           </li>
         </Link> */}
-
+  <Link href="/analyticsLog" className="">
+          <li
+            className={`p-2 flex my-4 items-center gap-2 rounded-xl ${
+              isActive("/viewQrCategory")
+                ? "bg-green-600"
+                : "hover:bg-slate-600"
+            }`}
+          >
+            <FaChartBar className="text-2xl" /> Analytics Log
+          </li>
+        </Link>
        
       </ul>
     </aside>
