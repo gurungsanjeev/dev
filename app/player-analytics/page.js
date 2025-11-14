@@ -55,9 +55,9 @@ const PlayerAnalytics = () => {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const [autoRefreshInterval, setAutoRefreshInterval] = useState(null);
-  const [totalQRPoints, setTotalQRPoints] = useState(0);
+
+  const [scanData, setScanData] = useState([]);
+  const [qrData, setQrData] = useState([]);
   const [formData, setFormData] = useState({
     username: "",
     firstName: "",
@@ -72,58 +72,134 @@ const PlayerAnalytics = () => {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerInterval, setTimerInterval] = useState(null);
 
-  // Auto-refresh functionality
-  useEffect(() => {
-    if (autoRefresh) {
-      // Set up auto-refresh every 5 seconds
-      const interval = setInterval(() => {
-        fetchPlayers();
-      }, 5000); // 5 seconds
-
-      setAutoRefreshInterval(interval);
-
-      // Clean up interval on unmount
-      return () => clearInterval(interval);
-    } else {
-      // Clear existing interval if auto-refresh is disabled
-      if (autoRefreshInterval) {
-        clearInterval(autoRefreshInterval);
-        setAutoRefreshInterval(null);
-      }
-    }
-  }, [autoRefresh]);
-
   // Clean up on unmount
   useEffect(() => {
     return () => {
-      if (autoRefreshInterval) {
-        clearInterval(autoRefreshInterval);
-      }
       if (timerInterval) {
         clearInterval(timerInterval);
       }
     };
   }, []);
 
-  // Fetch total points from QR-Data
+  // Fetch scan data and QR data
   useEffect(() => {
-    fetchTotalQRPoints();
+    fetchScanData();
+    fetchQRData();
   }, []);
 
-  const fetchTotalQRPoints = () => {
+  const fetchScanData = () => {
+    const scanDataRef = ref(db, "scannedQRCodes");
+    onValue(scanDataRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const scanArray = Object.keys(data).map((key) => ({
+          id: key,
+          ...data[key],
+        }));
+        setScanData(scanArray);
+      } else {
+        setScanData([]);
+      }
+    });
+  };
+
+  const fetchQRData = () => {
     const qrDataRef = ref(db, "QR-Data");
     onValue(qrDataRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const qrDataArray = Object.values(data);
-        const totalPoints = qrDataArray.reduce((sum, item) => {
-          return sum + (item.points || 0);
-        }, 0);
-        setTotalQRPoints(totalPoints);
+        const qrDataArray = Object.keys(data).map((key) => ({
+          id: key,
+          ...data[key],
+        }));
+        setQrData(qrDataArray);
       } else {
-        setTotalQRPoints(0);
+        setQrData([]);
       }
     });
+  };
+
+  // QR name matching and extraction functions
+  const extractBaseName = (qrName) => {
+    // Remove comma and trailing numbers (e.g., "Indrayani Devi,4" -> "Indrayani Devi")
+    let baseName = qrName.replace(/,\d+$/, "");
+
+    // Convert to lowercase and replace spaces with underscores for matching
+    baseName = baseName.toLowerCase().replace(/\s+/g, "_");
+
+    return baseName;
+  };
+
+  const findMatchingQR = (qrName, qrDataArray) => {
+    const baseName = extractBaseName(qrName);
+
+    return qrDataArray.find((qr) => {
+      const qrDataName = qr.name.toLowerCase().replace(/\s+/g, "_");
+      return qrDataName === baseName || qr.name === qrName;
+    });
+  };
+
+  // Calculate points for a user by cross-referencing with QR-Data (only unique QR codes)
+  const calculateUserPoints = (userId, scanData, qrData) => {
+    const userScans = scanData.filter((scan) => scan.userId === userId);
+
+    // Get unique QR codes only (no duplicates)
+    const uniqueQRNames = [...new Set(userScans.map((scan) => scan.qrName))];
+    let totalPoints = 0;
+
+    uniqueQRNames.forEach((qrName) => {
+      const matchingQR = findMatchingQR(qrName, qrData);
+      if (matchingQR) {
+        totalPoints += parseInt(matchingQR.points || 0);
+      }
+    });
+
+    return totalPoints;
+  };
+
+  // Calculate time span for a user (first to last scan)
+  const calculateTimeSpan = (userId, scanData) => {
+    const userScans = scanData.filter((scan) => scan.userId === userId);
+
+    if (userScans.length < 2) {
+      return 0; // Less than 2 scans, no time span
+    }
+
+    const scanTimes = userScans
+      .map((scan) => {
+        try {
+          // Parse date and time from "MM/DD/YYYY" and "HH:MM AM/PM" format
+          const dateTime = new Date(scan.date + " " + scan.time);
+          return dateTime.getTime();
+        } catch (error) {
+          console.error("Error parsing scan time:", scan.date, scan.time);
+          return 0;
+        }
+      })
+      .filter((time) => time > 0);
+
+    if (scanTimes.length < 2) {
+      return 0;
+    }
+
+    const firstScan = Math.min(...scanTimes);
+    const lastScan = Math.max(...scanTimes);
+
+    return lastScan - firstScan; // Return difference in milliseconds
+  };
+
+  // Format time span for display
+  const formatTimeSpan = (timeSpanMs) => {
+    if (timeSpanMs === 0) return "-";
+
+    const hours = Math.floor(timeSpanMs / (1000 * 60 * 60));
+    const minutes = Math.floor((timeSpanMs % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else {
+      return `${minutes}m`;
+    }
   };
 
   // Countdown timer functions
@@ -168,7 +244,7 @@ const PlayerAnalytics = () => {
     return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Fetch players from Firebase
+  // Fetch players from Firebase and combine with scan and QR data
   useEffect(() => {
     fetchPlayers();
     // Set up real-time listener for live updates
@@ -176,19 +252,34 @@ const PlayerAnalytics = () => {
     const unsubscribe = onValue(usersRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const usersArray = Object.keys(data).map((key) => ({
-          id: key,
-          ...data[key],
-          player_id: data[key].username || key, // Use username if available, otherwise use key
-          player_name:
-            data[key].firstName && data[key].lastName
-              ? `${data[key].firstName} ${data[key].lastName}`
-              : data[key].firstName || "Unknown User",
-          total_points: data[key].points_earned || 0,
-          time_taken: data[key].scanned_at || 0, // Using scanned_at as last activity time
-        }));
+        const usersArray = Object.keys(data).map((key) => {
+          // Calculate points by cross-referencing with QR-Data (unique QR codes only)
+          const calculatedPoints = calculateUserPoints(key, scanData, qrData);
 
-        // Calculate rank based on points_earned (highest points gets rank 1)
+          // Calculate number of unique scans (no duplicates)
+          const userScans = scanData.filter((scan) => scan.userId === key);
+          const uniqueScanCount = new Set(userScans.map((scan) => scan.qrName))
+            .size;
+
+          // Calculate time span between first and last scan
+          const timeSpan = calculateTimeSpan(key, scanData);
+
+          return {
+            id: key,
+            ...data[key],
+            player_id: key, // Use Firebase auto-generated ID as per requirements
+            player_name:
+              data[key].firstName && data[key].lastName
+                ? `${data[key].firstName} ${data[key].lastName}`
+                : data[key].firstName || "Unknown User",
+            total_points: calculatedPoints, // Use calculated points from cross-referenced data
+            scan_count: uniqueScanCount, // Number of unique QR scans (no duplicates)
+            time_span: timeSpan, // Time span in milliseconds
+            formatted_time_span: formatTimeSpan(timeSpan), // Formatted for display
+          };
+        });
+
+        // Calculate rank based on total_points (highest points gets rank 1)
         const sortedByPoints = usersArray.sort(
           (a, b) => (b.total_points || 0) - (a.total_points || 0),
         );
@@ -206,7 +297,7 @@ const PlayerAnalytics = () => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [scanData, qrData]); // Add scanData and qrData as dependencies
 
   const fetchPlayers = () => {
     setLoading(true);
@@ -214,19 +305,34 @@ const PlayerAnalytics = () => {
     onValue(usersRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const usersArray = Object.keys(data).map((key) => ({
-          id: key,
-          ...data[key],
-          player_id: data[key].username || key, // Use username if available, otherwise use key
-          player_name:
-            data[key].firstName && data[key].lastName
-              ? `${data[key].firstName} ${data[key].lastName}`
-              : data[key].firstName || "Unknown User",
-          total_points: data[key].points_earned || 0,
-          time_taken: data[key].scanned_at || 0, // Using scanned_at as last activity time
-        }));
+        const usersArray = Object.keys(data).map((key) => {
+          // Calculate points by cross-referencing with QR-Data (unique QR codes only)
+          const calculatedPoints = calculateUserPoints(key, scanData, qrData);
 
-        // Calculate rank based on points_earned (highest points gets rank 1)
+          // Calculate number of unique scans (no duplicates)
+          const userScans = scanData.filter((scan) => scan.userId === key);
+          const uniqueScanCount = new Set(userScans.map((scan) => scan.qrName))
+            .size;
+
+          // Calculate time span between first and last scan
+          const timeSpan = calculateTimeSpan(key, scanData);
+
+          return {
+            id: key,
+            ...data[key],
+            player_id: key, // Use Firebase auto-generated ID as per requirements
+            player_name:
+              data[key].firstName && data[key].lastName
+                ? `${data[key].firstName} ${data[key].lastName}`
+                : data[key].firstName || "Unknown User",
+            total_points: calculatedPoints, // Use calculated points from cross-referenced data
+            scan_count: uniqueScanCount, // Number of unique QR scans (no duplicates)
+            time_span: timeSpan, // Time span in milliseconds
+            formatted_time_span: formatTimeSpan(timeSpan), // Formatted for display
+          };
+        });
+
+        // Calculate rank based on total_points (highest points gets rank 1)
         const sortedByPoints = usersArray.sort(
           (a, b) => (b.total_points || 0) - (a.total_points || 0),
         );
@@ -248,10 +354,6 @@ const PlayerAnalytics = () => {
     fetchPlayers();
     // Force immediate data reload by updating lastUpdated
     setLastUpdated(new Date());
-  };
-
-  const toggleAutoRefresh = () => {
-    setAutoRefresh(!autoRefresh);
   };
 
   const handleDeletePlayer = async (playerId) => {
@@ -345,20 +447,12 @@ const PlayerAnalytics = () => {
 
   const stats = {
     totalPlayers: players.length,
-    totalPoints: totalQRPoints,
-    avgPoints:
-      players.length > 0
-        ? Math.round(
-            players.reduce((sum, p) => sum + p.total_points, 0) /
-              players.length,
-          )
+    totalPoints:
+      qrData.length > 0
+        ? qrData.reduce((sum, qr) => sum + parseInt(qr.points || 0), 0)
         : 0,
     topScore:
       players.length > 0 ? Math.max(...players.map((p) => p.total_points)) : 0,
-    mostRecentActivity:
-      players.length > 0
-        ? Math.max(...players.map((p) => p.time_taken || 0))
-        : 0,
   };
 
   const getRankColor = (rank) => {
@@ -384,25 +478,14 @@ const PlayerAnalytics = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Player Analytics Dashboard
             </h1>
-            {/* <p className="text-gray-600 text-base">
-              Track performance and rankings in real-time{" "}
-              {autoRefresh && "(auto-refreshing every 5 seconds)"}
-            </p>*/}
+            <p className="text-gray-600 text-base">
+              Track performance and rankings
+            </p>
             {lastUpdated && (
               <div className="flex items-center gap-4 mt-2">
                 <p className="text-sm text-gray-500">
                   Last updated: {lastUpdated.toLocaleTimeString()}
                 </p>
-                <div className="flex items-center gap-2">
-                  <div
-                    className={`w-2 h-2 rounded-full ${
-                      autoRefresh ? "bg-green-500 animate-pulse" : "bg-gray-400"
-                    }`}
-                  ></div>
-                  <span className="text-xs text-gray-500">
-                    Auto-refresh {autoRefresh ? "enabled" : "disabled"}
-                  </span>
-                </div>
               </div>
             )}
           </div>
@@ -415,22 +498,6 @@ const PlayerAnalytics = () => {
                 <RefreshIcon className="h-4 w-4" />
                 Refresh
               </Button>*/}
-              <Button
-                onClick={toggleAutoRefresh}
-                variant={autoRefresh ? "default" : "outline"}
-                className={`flex items-center gap-2 px-4 py-2 ${
-                  autoRefresh
-                    ? "bg-green-600 hover:bg-green-700 text-white"
-                    : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    autoRefresh ? "bg-white animate-pulse" : "bg-gray-400"
-                  }`}
-                ></div>
-                Auto {autoRefresh ? "ON" : "OFF"}
-              </Button>
             </div>
             {/* <Button
               onClick={openAddModal}
@@ -564,7 +631,7 @@ const PlayerAnalytics = () => {
                         Rank
                       </th>
                       <th className="text-left p-3 text-sm font-medium text-gray-600">
-                        User ID
+                        Player ID
                       </th>
                       <th className="text-left p-3 text-sm font-medium text-gray-600">
                         Player Name
@@ -613,22 +680,13 @@ const PlayerAnalytics = () => {
                             </div>
                           </td>
                           <td className="p-3">
-                            <div className="text-gray-700 font-medium">
-                              {player.time_taken && player.time_taken > 0
-                                ? new Date(
-                                    player.time_taken,
-                                  ).toLocaleDateString() +
-                                  " " +
-                                  new Date(
-                                    player.time_taken,
-                                  ).toLocaleTimeString()
-                                : "No activity"}
+                            <div className="text-blue-600 font-semibold">
+                              {player.scan_count || 0}
                             </div>
                           </td>
                           <td className="p-3">
-                            <div className="text-gray-700 font-medium">
-                              {/* Placeholder for time taken functionality - will be added later */}
-                              <span className="text-gray-400">-</span>
+                            <div className="text-purple-700 font-medium">
+                              {player.formatted_time_span || "-"}
                             </div>
                           </td>
                           <td className="p-3">
