@@ -183,11 +183,25 @@ export default function AnalyticsLogPage() {
 
   const stats = {
     totalScans: logs.length,
-    totalPointsAwarded: logs.reduce((s, l) => s + l.points_earned, 0),
-    avgPointsPerScan:
-      logs.length > 0 ? Math.round(logs.reduce((s, l) => s + l.points_earned, 0) / logs.length) : 0,
+      // totalPointsAwarded: logs.reduce((s, l) => s + l.points_earned, 0),
+/*     avgPointsPerScan:
+      logs.length > 0 ? Math.round(logs.reduce((s, l) => s + l.points_earned, 0) / logs.length) : 0, */
+    validScans: new Set(logs.filter((log) => log.qr_id && log.player_id).map((log) => `${log.player_id}-${log.qr_id}`)).size,
     totalPlayers: new Set(logs.map((log) => log.player_id).filter(Boolean)).size,
   }
+
+  // average scans per player (each player's valid scans / total players)
+  let playerValidScansMap = {}
+  logs.forEach((log) => {
+    if (log.player_id && log.qr_id) {
+      if (!playerValidScansMap[log.player_id]) {
+        playerValidScansMap[log.player_id] = new Set()
+      }
+      playerValidScansMap[log.player_id].add(log.qr_id)
+    }
+  })
+  const totalValidScansAcrossAllPlayers = Object.values(playerValidScansMap).reduce((sum, set) => sum + set.size, 0)
+  stats.avgScansPerPlayer = stats.totalPlayers > 0 ? Math.round(totalValidScansAcrossAllPlayers / stats.totalPlayers) : 0
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -221,16 +235,16 @@ export default function AnalyticsLogPage() {
 
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Points</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stats.totalPointsAwarded.toLocaleString()}</p>
+                <p className="text-sm font-medium text-gray-600">Valid Scans</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{stats.validScans}</p>
               </div>
               <CoinsIcon />
             </div>
 
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Avg Points/Scan</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stats.avgPointsPerScan}</p>
+                <p className="text-sm font-medium text-gray-600">Avg Scan Per Player</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{stats.avgScansPerPlayer}</p>
               </div>
               <ChartIcon />
             </div>
@@ -266,7 +280,7 @@ export default function AnalyticsLogPage() {
                         <th className="text-left p-3 text-sm font-medium text-gray-600">User Name</th>
                         <th className="text-left p-3 text-sm font-medium text-gray-600">QR Name</th>
                         <th className="text-left p-3 text-sm font-medium text-gray-600">Scanned At</th>
-                        <th className="text-left p-3 text-sm font-medium text-gray-600">Points</th>
+                          <th className="text-left p-3 text-sm font-medium text-gray-600">Points</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -296,7 +310,7 @@ export default function AnalyticsLogPage() {
                               </span>
                             </td>
 
-                            <td className="p-3">
+                               <td className="p-3">
                               <span className="inline-flex items-center px-2 py-0.5 text-sm font-medium bg-green-100 text-green-800 rounded-full">
                                 +{log.points_earned}
                               </span>
